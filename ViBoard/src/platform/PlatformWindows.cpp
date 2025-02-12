@@ -34,7 +34,7 @@ namespace vi {
 			return getStartupFolderPath() / (VI_EXECUTEABLE_NAME + ".lnk"s);
 		}
 
-		HRESULT createLink(LPCWSTR targetPath, LPCSTR linkPath, LPCWSTR description) noexcept {
+		HRESULT createLink(LPCWSTR targetPath, LPCSTR linkPath, LPCWSTR workingDir, LPCWSTR description) noexcept {
 			// Get a pointer to the IShellLink interface. It is assumed that CoInitialize
 			// has already been called.
 			IShellLink* psl;
@@ -43,6 +43,7 @@ namespace vi {
 				// Set the path to the shortcut target and add the description. 
 				psl->SetPath(targetPath);
 				psl->SetDescription(description);
+				psl->SetWorkingDirectory(workingDir);
 
 				IPersistFile* ppf;
 				// Query IShellLink for the IPersistFile interface, used for saving the 
@@ -89,7 +90,7 @@ namespace vi {
 			return false;
 		} else {
 			const auto exePath = fs::current_path() / std::format("{}.exe", VI_EXECUTEABLE_NAME);
-			if (FAILED(createLink(exePath.c_str(), getStartupShortcut().string().c_str(), L"Launch ViBoard"))) {
+			if (FAILED(createLink(exePath.c_str(), getStartupShortcut().string().c_str(), fs::current_path().c_str(), L"Launch ViBoard"))) {
 				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
 					"Unable to open on startup",
 					"An error occured while trying to add program to startup programs.\n"
