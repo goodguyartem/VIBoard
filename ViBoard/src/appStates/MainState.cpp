@@ -63,7 +63,7 @@ namespace vi {
 
 			std::unordered_set<fs::path> files;
 			for (const auto& entry : fs::directory_iterator(board.path)) {
-				if (entry.is_regular_file() && entry.path().extension() == ".wav") {
+				if (entry.is_regular_file() && isSupported(entry.path().extension())) {
 					files.insert(entry);
 				}
 			}
@@ -671,12 +671,14 @@ namespace vi {
 
 		file["showWelcome"] = showWelcome;
 
+		json& boardArray = file["soundboards"];
 		for (const Soundboard& board : soundboards) {
-			json& boardJson = file["soundboards"].emplace_back();
+			json& boardJson = boardArray.emplace_back();
 			boardJson["path"] = board.path;
 
+			json& soundsMap = boardJson["sounds"];
 			for (const Sound& sound : board.sounds) {
-				json& soundJson = boardJson["sounds"][sound.getPath().string()];
+				json& soundJson = soundsMap[sound.getPath().string()];
 
 				for (size_t i = 0; i < playback.size(); i++) {
 					soundJson["gains"].emplace_back(sound.getGainOverride(i));
