@@ -1,0 +1,7 @@
+[submodule "dependencies/json"]
+	path = dependencies/json
+	url = https://github.com/nlohmann/json
+[submodule "dependencies/imgui"]
+	path = dependencies/imgui
+	url = https://github.com/goodguyartem/imgui.git
+	branch = docking
