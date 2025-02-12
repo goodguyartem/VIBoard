@@ -111,17 +111,8 @@ namespace vi {
 			return hotkey;
 		}
 
-		fs::path getStoragePath() noexcept {
-			const char* userFolder = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
-			if (!userFolder) {
-				return "";
-			}
-			return fs::path(userFolder) / VI_EXECUTEABLE_NAME;
-		}
-
-		const fs::path storagePath = getStoragePath();
-		const fs::path settingsPath = storagePath / "settings.json";
-		const fs::path imGuiPath = storagePath / "imgui.ini";
+		const std::filesystem::path settingsPath = storagePath / "settings.json";
+		const std::filesystem::path imGuiPath = storagePath / "imgui.ini";
 	}
 
 	MainState::MainState(Application& app)
@@ -138,8 +129,7 @@ namespace vi {
 				} catch (std::exception& e) {
 					SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
 						"Error loading settings!",
-						("Unable to load user settings.\n"
-							"They will be reset to program defaults.\n\n"
+						("An occured while loading user settings. Some settings may be reset to their defaults.\n\n"
 							"Error: "s + e.what()).c_str(),
 						app.getWindow());
 				}

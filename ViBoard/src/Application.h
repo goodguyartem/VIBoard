@@ -10,7 +10,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include <fstream>
+#include <filesystem>
 
 namespace vi {
 	using WindowOwner = std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)>;
@@ -74,4 +74,8 @@ namespace vi {
 		void update();
 		void render() const;
 	};
+
+	std::filesystem::path getStoragePath() noexcept;
+
+	inline const std::filesystem::path storagePath = getStoragePath();
 }

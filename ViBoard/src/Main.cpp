@@ -8,6 +8,7 @@
 
 #include <string>
 #include <exception>
+#include <fstream>
 #include <stdlib.h>
 
 using namespace std::string_literals;
@@ -51,8 +52,17 @@ namespace vi {
 int main() {
 	int exit = EXIT_FAILURE;
 
+	static const auto instancePath = vi::getStoragePath() / "ViBoard.instance";
+	std::error_code ec;
+	if (std::filesystem::exists(instancePath) && !std::filesystem::remove(instancePath, ec)) {
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Unable to launch!", "The program is already running! How silly of you...", nullptr);
+		return 0;
+	}
+	std::ofstream instanceCheck(instancePath, std::ofstream::trunc);
+
 	try {
 		vi::init();
+
 		vi::Application app;
 		app.run();
 		exit = EXIT_SUCCESS;
@@ -64,6 +74,9 @@ int main() {
 		VI_CRITICAL("Fatal crash! (Catch-all.)");
 		vi::onError("");
 	}
+
+	instanceCheck.close();
+	std::filesystem::remove(instancePath);
 
 	vi::quit();
 	return exit;

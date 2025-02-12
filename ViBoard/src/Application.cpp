@@ -14,6 +14,8 @@
 #include <SDL3/SDL_opengl.h>
 #endif
 
+namespace fs = std::filesystem;
+
 namespace vi {
 	void Application::run() {
 		init();
@@ -69,7 +71,7 @@ namespace vi {
 
 		initPlatform();
 
-		window.reset(SDL_CreateWindow("ViBoard Beta 1.0", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN));
+		window.reset(SDL_CreateWindow("ViBoard Beta", 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN));
 		if (!window) {
 			throw ExternalError(SDL_GetError());
 		}
@@ -185,5 +187,13 @@ namespace vi {
 		SDL_GL_MakeCurrent(window.get(), glContext);
 
 		SDL_GL_SwapWindow(window.get());
+	}
+
+	fs::path getStoragePath() noexcept {
+		const char* userFolder = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
+		if (!userFolder) {
+			return "";
+		}
+		return fs::path(userFolder) / VI_EXECUTEABLE_NAME;
 	}
 }
