@@ -31,6 +31,8 @@ namespace vi {
 			}
 		}
 
+		states.clear(); // Call state destructors while libraries are still initialized.
+
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplSDL3_Shutdown();
 		SDL_GL_DestroyContext(glContext);

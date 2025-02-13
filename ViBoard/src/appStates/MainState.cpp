@@ -648,7 +648,7 @@ namespace vi {
 		ImGui::Text("Welcome to ViBoard!");
 		ImGui::PopFont();
 		ImGui::PushFont(app->fonts[4]);
-		ImGui::Text("Version Beta 1.3.0");
+		ImGui::Text("Version Beta 1.4.0");
 		ImGui::PopFont();
 		ImGui::NewLine();
 
@@ -838,6 +838,25 @@ namespace vi {
 		file["usePtt"] = usePtt;
 		file["pttToggleHotkey"] = serializeHotkey(pttToggleHotkey);
 
+		const bool maximized = SDL_GetWindowFlags(app->getWindow()) & SDL_WINDOW_MAXIMIZED;
+		file["maximized"] = maximized;
+		if (!maximized) {
+			SDL_Rect windowBounds;
+			if (SDL_GetWindowPosition(app->getWindow(), &windowBounds.x, &windowBounds.y)) {
+				file["windowX"] = windowBounds.x;
+				file["windowY"] = windowBounds.y;
+			}
+			if (SDL_GetWindowSize(app->getWindow(), &windowBounds.w, &windowBounds.h)) {
+				file["windowWidth"] = windowBounds.w;
+				file["windowHeight"] = windowBounds.h;
+			}
+		} else {
+			file["windowX"] = 0;
+			file["windowY"] = 0;
+			file["windowWidth"] = 0;
+			file["windowHeight"] = 0;
+		}
+
 		std::ofstream stream(settingsPath, std::ofstream::trunc);
 		stream << file;
 		if (!stream) {
@@ -936,6 +955,19 @@ namespace vi {
 				usePtt = !usePtt;
 			};
 			pttToggleHotkey = registerHotkey(hotkey);
+		}
+
+		if (file["maximized"].get<bool>()) {
+			SDL_MaximizeWindow(app->getWindow());
+		} else {
+			SDL_Rect windowBounds;
+			file["windowX"].get_to(windowBounds.x);
+			file["windowY"].get_to(windowBounds.y);
+			file["windowWidth"].get_to(windowBounds.w);
+			file["windowHeight"].get_to(windowBounds.h);
+		
+			SDL_SetWindowPosition(app->getWindow(), windowBounds.x, windowBounds.y);
+			SDL_SetWindowSize(app->getWindow(), windowBounds.w, windowBounds.h);
 		}
 	}
 
