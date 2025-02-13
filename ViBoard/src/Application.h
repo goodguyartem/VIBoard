@@ -24,6 +24,7 @@ namespace vi {
 		std::vector<ImFont*> fonts;
 
 		TrayOwner tray{nullptr, SDL_DestroyTray};
+		bool canSleep = true;
 
 		void run();
 		
@@ -52,8 +53,7 @@ namespace vi {
 		}
 
 		bool isInactive() const noexcept {
-			const SDL_WindowFlags flags = SDL_GetWindowFlags(window.get());
-			return flags & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN);
+			return canSleep && SDL_GetWindowFlags(window.get()) & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN);
 		}
 
 	private:

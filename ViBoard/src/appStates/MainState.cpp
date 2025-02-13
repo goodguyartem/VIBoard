@@ -264,6 +264,10 @@ namespace vi {
 	}
 
 	void MainState::update() noexcept {
+		if (!app->canSleep && SDL_GetAudioStreamAvailable(playback[0].stream.get()) == 0 && SDL_GetAudioStreamAvailable(playback[1].stream.get()) == 0) {
+			app->canSleep = true;
+		}
+
 		if (showWelcome) {
 			ImGui::PushStyleVarX(ImGuiStyleVar_FramePadding, 8.0f);
 			showWelcomeScreen();
@@ -290,10 +294,12 @@ namespace vi {
 
 		if (pttScancode != SDL_SCANCODE_UNKNOWN) {
 			bool sendPtt = false;
-			for (const PlaybackConfig& config : playback) {
-				if (config.stream && SDL_GetAudioStreamAvailable(config.stream.get()) != 0) {
-					sendPtt = true;
-					break;
+			if (usePtt) {
+				for (const PlaybackConfig& config : playback) {
+					if (config.stream && SDL_GetAudioStreamAvailable(config.stream.get()) != 0) {
+						sendPtt = true;
+						break;
+					}
 				}
 			}
 			if (sendPtt) {
@@ -456,17 +462,32 @@ namespace vi {
 		ImGui::Text(stopHotkeyLabel.c_str());
 		ImGui::NewLine();
 
-		if (ImGui::Button("Add push-to-talk key", buttonSize)) {
-			pttAssign.showMenu = true;
-		}
+		ImGui::Checkbox("Send push-to-talk key", &usePtt);
+		
 		ImVec4 textCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
 		textCol.w = 0.7f;
 		ImGui::PushStyleColor(ImGuiCol_Text, textCol);
-		ImGui::Text("Send your assigned key to the operating system to trigger your game's push-to-talk.");
+		ImGui::Text("Send your assigned key to the operating system when playing a sound to trigger your game's push-to-talk.");
+		ImGui::NewLine();
 		ImGui::PopStyleColor();
-		
-		const std::string pttLabel = std::format("Push-to-talk key: {}.", getPushToTalkKeyName());
+
+		if (ImGui::Button("Add push-to-talk key", buttonSize)) {
+			pttAssign.showMenu = true;
+		}
+		const ImVec2 addPttButtonSize = ImGui::GetItemRectSize();
+
+		const std::string pttLabel = std::format("Current key: {}.", getPushToTalkKeyName());
 		ImGui::Text(pttLabel.c_str());
+
+		if (ImGui::Button("Add toggle hotkey", addPttButtonSize)) {
+			keyAssign.showMenu = true;
+			keyAssign.id = &pttToggleHotkey;
+			keyAssign.action = [this]() {
+				usePtt = !usePtt;
+			};
+		}
+		const std::string pttToggleHotkeyLabel = std::format("Push-to-talk toggle: {}.", getHotkeyName(pttToggleHotkey));
+		ImGui::Text(pttToggleHotkeyLabel.c_str());
 
 		ImGui::NewLine();
 		ImGui::Text("Theme");
@@ -493,7 +514,7 @@ namespace vi {
 		ImGui::NewLine();
 
 		if (ImGui::Button("Check for updates", buttonSize)) {
-			SDL_OpenURL("https://www.github.com/goodguyartem/viboard");
+			SDL_OpenURL("https://github.com/goodguyartem/VIBoard/releases");
 		}
 		ImGui::SameLine();
 		ImGui::BeginDisabled();
@@ -627,7 +648,7 @@ namespace vi {
 		ImGui::Text("Welcome to ViBoard!");
 		ImGui::PopFont();
 		ImGui::PushFont(app->fonts[4]);
-		ImGui::Text("Version Beta 1.0");
+		ImGui::Text("Version Beta 1.3.0");
 		ImGui::PopFont();
 		ImGui::NewLine();
 
@@ -731,11 +752,19 @@ namespace vi {
 
 	void MainState::tryPlay(const Sound& sound) noexcept {
 		try {
-			if (playback[0].stream) {
-				sound.play(playback[0].stream.get(), 0);
-			}
-			if (dualPlayback && playback[1].stream && playback[0].deviceIndex != playback[1].deviceIndex) {
-				sound.play(playback[1].stream.get(), 1);
+			const bool playS0 = playback[0].stream != nullptr;
+			const bool playS1 = dualPlayback && playback[1].stream && playback[0].deviceIndex != playback[1].deviceIndex;
+
+			if (playS0 || playS1) {
+				if (playS0) {
+					sound.play(playback[0].stream.get(), 0);
+				}
+				if (playS1) {
+					sound.play(playback[1].stream.get(), 1);
+				}
+				if (pttScancode != SDL_SCANCODE_UNKNOWN && usePtt) {
+					app->canSleep = false;
+				}
 			}
 		} catch (const std::exception& e) {
 			const std::string message = std::format(
@@ -806,6 +835,8 @@ namespace vi {
 
 		file["pttScancode"] = pttScancode;
 		file["pttRaw"] = pttRaw;
+		file["usePtt"] = usePtt;
+		file["pttToggleHotkey"] = serializeHotkey(pttToggleHotkey);
 
 		std::ofstream stream(settingsPath, std::ofstream::trunc);
 		stream << file;
@@ -897,6 +928,15 @@ namespace vi {
 
 		file["pttScancode"].get_to(pttScancode);
 		file["pttRaw"].get_to(pttRaw);
+		file["usePtt"].get_to(usePtt);
+
+		if (!file["pttToggleHotkey"].is_null()) {
+			Hotkey hotkey = deserializeHotkey(file["pttToggleHotkey"]);
+			hotkey.callback = [this]() {
+				usePtt = !usePtt;
+			};
+			pttToggleHotkey = registerHotkey(hotkey);
+		}
 	}
 
 	void MainState::setTheme() const noexcept {

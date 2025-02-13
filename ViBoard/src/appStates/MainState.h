@@ -80,6 +80,9 @@ namespace vi {
 		SDL_Scancode pttScancode = SDL_SCANCODE_UNKNOWN;
 		uint16_t pttRaw = 0;
 		bool pttActive = false;
+		
+		bool usePtt = false;
+		HotkeyId pttToggleHotkey = nullHotkey;
 
 		BrowseUserData browseData{app->getWindow()};
 		int theme = 0;
