@@ -5,6 +5,7 @@ A lightweight free and open-source soundboard.
 * A dedicated window for each soundboard you add, with the ability to tab between them and place them anywhere on your display.
 * Ability to assign a hotkey to each sound (can be triggered while in almost any application or game).
 * Support for outputing to multiple output devices for mixing soundboards with your microphone input (requires [VB Cable](https://vb-audio.com/Cable/)).
+* Ability to trigger a game's push-to-talk when playing a sound.
 * .mp3 and .wav support.
 * Themes. Who doesn't like themes
 
@@ -50,4 +51,3 @@ See `src/platform/`.
 
 ## To-do
 * .ogg support
-* Ability to simulate a game's push-to-talk key?
