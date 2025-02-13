@@ -217,32 +217,48 @@ namespace vi {
 		}
 
 		case SDL_EVENT_KEY_DOWN:
-			if (!keyAssign.assigning || event.key.scancode >= SDL_SCANCODE_LCTRL) {
-				break;
-			}
-			const SDL_Keymod mod = stripUnsupportedMods(event.key.mod);
-			if (event.key.scancode == SDL_SCANCODE_ESCAPE && (mod & ~SDL_KMOD_NUM) == SDL_KMOD_NONE) {
+			if (keyAssign.assigning) {
+				const SDL_Keymod mod = stripUnsupportedMods(event.key.mod);
+				const SDL_Keymod mainMod = (mod & ~SDL_KMOD_NUM);
+
+				if (event.key.scancode >= SDL_SCANCODE_LCTRL
+					|| (event.key.scancode == SDL_SCANCODE_F12 && mainMod == SDL_KMOD_NONE)
+					|| (event.key.scancode == SDL_SCANCODE_NUMLOCKCLEAR && (mainMod == SDL_KMOD_LCTRL || mainMod == SDL_KMOD_RCTRL))
+					|| (event.key.scancode == SDL_SCANCODE_SCROLLLOCK && (mainMod == SDL_KMOD_LCTRL || mainMod == SDL_KMOD_RCTRL))) {
+					break;
+				}
+				if (event.key.scancode == SDL_SCANCODE_ESCAPE && mainMod == SDL_KMOD_NONE) {
+					keyAssign.assigning = false;
+					break;
+				}
+
+				assert(keyAssign.id);
+
+				if (isValidHotkey(*keyAssign.id)) {
+					unregisterHotkey(*keyAssign.id);
+					*keyAssign.id = nullHotkey;
+				}
+
+				if (event.key.scancode != SDL_SCANCODE_DELETE || mainMod != SDL_KMOD_NONE) {
+					Hotkey hotkey;
+					hotkey.scancode = event.key.scancode;
+					hotkey.raw = event.key.raw;
+					hotkey.mod = mod;
+					hotkey.callback = keyAssign.action;
+					*keyAssign.id = registerHotkey(hotkey);
+				}
+
 				keyAssign.assigning = false;
-				break;
+			} else if (pttAssign.assigning) {
+				if (event.key.scancode == SDL_SCANCODE_DELETE) {
+					pttScancode = SDL_SCANCODE_UNKNOWN;
+					pttRaw = 0;
+				} else if (event.key.scancode != SDL_SCANCODE_ESCAPE) {
+					pttScancode = event.key.scancode;
+					pttRaw = event.key.raw;
+				}
+				pttAssign.assigning = false;
 			}
-
-			assert(keyAssign.id);
-
-			if (isValidHotkey(*keyAssign.id)) {
-				unregisterHotkey(*keyAssign.id);
-				*keyAssign.id = nullHotkey;
-			}
-
-			if (event.key.scancode != SDL_SCANCODE_DELETE || (mod & ~SDL_KMOD_NUM) != SDL_KMOD_NONE) {
-				Hotkey hotkey;
-				hotkey.scancode = event.key.scancode;
-				hotkey.raw = event.key.raw;
-				hotkey.mod = mod;
-				hotkey.callback = keyAssign.action;
-				*keyAssign.id = registerHotkey(hotkey);
-			}
-
-			keyAssign.assigning = false;
 			break;
 		}
 	}
@@ -260,6 +276,8 @@ namespace vi {
 			showKeyAssign();
 		} else if (soundVolumeMenu.showMenu) {
 			showSoundVolumeMenu();
+		} else if (pttAssign.showMenu) {
+			showPushToTalkAssign();
 		}
 		ImGui::PopStyleVar();
 
@@ -269,6 +287,23 @@ namespace vi {
 
 		ImGui::EndDisabled();
 		ImGui::PopStyleVar();
+
+		if (pttScancode != SDL_SCANCODE_UNKNOWN) {
+			bool sendPtt = false;
+			for (const PlaybackConfig& config : playback) {
+				if (config.stream && SDL_GetAudioStreamAvailable(config.stream.get()) != 0) {
+					sendPtt = true;
+					break;
+				}
+			}
+			if (sendPtt) {
+				sendKeyPress(pttRaw, true);
+				pttActive = true;
+			} else if (pttActive) {
+				sendKeyPress(pttRaw, false);
+				pttActive = false;
+			}
+		}
 	}
 
 	void MainState::showSoundboards() noexcept {
@@ -410,15 +445,28 @@ namespace vi {
 		}
 		ImGui::EndDisabled();
 		ImGui::SameLine();
-		if (ImGui::Button("Add hotkey", buttonSize)) {
+		if (ImGui::Button("Add stop hotkey", buttonSize)) {
 			keyAssign.showMenu = true;
 			keyAssign.id = &stopHotkey;
 			keyAssign.action = [this]() {
 				stop();
 				};
 		}
-		const std::string label = std::format("Hotkey: {}.", getHotkeyName(stopHotkey));
-		ImGui::Text(label.c_str());
+		const std::string stopHotkeyLabel = std::format("Stop hotkey: {}.", getHotkeyName(stopHotkey));
+		ImGui::Text(stopHotkeyLabel.c_str());
+		ImGui::NewLine();
+
+		if (ImGui::Button("Add push-to-talk key", buttonSize)) {
+			pttAssign.showMenu = true;
+		}
+		ImVec4 textCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+		textCol.w = 0.7f;
+		ImGui::PushStyleColor(ImGuiCol_Text, textCol);
+		ImGui::Text("Send your assigned key to the operating system to trigger your game's push-to-talk.");
+		ImGui::PopStyleColor();
+		
+		const std::string pttLabel = std::format("Push-to-talk key: {}.", getPushToTalkKeyName());
+		ImGui::Text(pttLabel.c_str());
 
 		ImGui::NewLine();
 		ImGui::Text("Theme");
@@ -475,6 +523,15 @@ namespace vi {
 				ImGui::Text("%s", name.c_str());
 
 				ImGui::PopFont();
+#ifdef VI_PLATFORM_WINDOWS
+				if (isValidHotkey(*keyAssign.id)) {
+					const Hotkey& hotkey = getHotkey(*keyAssign.id);
+					if ((hotkey.scancode == SDL_SCANCODE_NUMLOCKCLEAR || hotkey.scancode == SDL_SCANCODE_SCROLLLOCK) && (hotkey.mod & ~SDL_KMOD_NUM) != SDL_KMOD_NONE) {
+						ImGui::TextColored(ImVec4(0.8f, 0.1f, 0.1f, 1.0f), "Current hotkey may not behave as expected due to system behaviour.");
+					}
+				}
+#endif
+
 				ImGui::NewLine();
 
 				if (ImGui::Button("OK")) {
@@ -499,6 +556,44 @@ namespace vi {
 					keyAssign.assigning = false;
 				}
 			}
+			ImGui::EndPopup();
+		}
+	}
+
+	void MainState::showPushToTalkAssign() noexcept {
+		ImGui::SetNextWindowSizeConstraints(ImVec2(600.0f, 0.0f), ImVec2(600.0f, 700.0f));
+		ImGui::OpenPopup("Assign a push-to-talk key");
+		if (ImGui::BeginPopupModal("Assign a push-to-talk key", &pttAssign.showMenu, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings)) {
+			ImGui::PushTextWrapPos(ImGui::GetWindowWidth() - 16.0f);
+			ImGui::Text("The program can try to trigger a game's push-to-talk functionality by sending a key you specify here to your operating system.\n");
+			ImGui::Text("This may not work in all games. If your game is running with admin privileges, you may have to also run ViBoard as an admin.");
+			ImGui::NewLine();
+			ImGui::Text("Current key:");
+
+			if (!pttAssign.assigning) {
+				ImGui::PushFont(app->fonts[3]);
+				const std::string name = getPushToTalkKeyName();
+				ImGui::Text("%s", name.c_str());
+				ImGui::PopFont();
+
+				ImGui::NewLine();
+				if (ImGui::Button("OK")) {
+					pttAssign.showMenu = false;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Change key")) {
+					pttAssign.assigning = true;
+				}
+
+			} else {
+				ImGui::NewLine();
+				ImGui::Text("Press a key you would like to assign, or [Del] to remove.");
+				
+				if (ImGui::Button("Cancel")) {
+					pttAssign.assigning = false;
+				}
+			}
+			ImGui::PopTextWrapPos();
 			ImGui::EndPopup();
 		}
 	}
@@ -709,6 +804,9 @@ namespace vi {
 		file["minimizeToTray"] = minimizeToTray;
 		file["startMinimized"] = startMinimized;
 
+		file["pttScancode"] = pttScancode;
+		file["pttRaw"] = pttRaw;
+
 		std::ofstream stream(settingsPath, std::ofstream::trunc);
 		stream << file;
 		if (!stream) {
@@ -796,6 +894,9 @@ namespace vi {
 
 		file["minimizeToTray"].get_to(minimizeToTray);
 		file["startMinimized"].get_to(startMinimized);
+
+		file["pttScancode"].get_to(pttScancode);
+		file["pttRaw"].get_to(pttRaw);
 	}
 
 	void MainState::setTheme() const noexcept {

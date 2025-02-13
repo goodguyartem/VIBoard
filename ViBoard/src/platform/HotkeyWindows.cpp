@@ -44,6 +44,7 @@ namespace vi {
 				case SDL_SCANCODE_KP_8: return VK_NUMPAD8;
 				case SDL_SCANCODE_KP_9: return VK_NUMPAD9;
 				case SDL_SCANCODE_KP_PERIOD: return VK_DECIMAL;
+				case SDL_SCANCODE_NUMLOCKCLEAR: return VK_NUMLOCK;
 				}
 			}
 			return MapVirtualKey(hotkey.raw, MAPVK_VSC_TO_VK);

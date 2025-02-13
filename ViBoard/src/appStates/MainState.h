@@ -33,6 +33,11 @@ namespace vi {
 		std::function<void()> action;
 	};
 
+	struct PushToTalkAssign {
+		bool showMenu = false;
+		bool assigning = false;
+	};
+
 	struct SoundVolumeMenu {
 		bool showMenu = false;
 		size_t board = 0;
@@ -70,6 +75,11 @@ namespace vi {
 		KeybindAssign keyAssign;
 		SoundVolumeMenu soundVolumeMenu;
 		HotkeyId stopHotkey = nullHotkey;
+		
+		PushToTalkAssign pttAssign;
+		SDL_Scancode pttScancode = SDL_SCANCODE_UNKNOWN;
+		uint16_t pttRaw = 0;
+		bool pttActive = false;
 
 		BrowseUserData browseData{app->getWindow()};
 		int theme = 0;
@@ -81,8 +91,13 @@ namespace vi {
 		void showSoundboards() noexcept;
 		void showOptions() noexcept;
 		void showKeyAssign() noexcept;
+		void showPushToTalkAssign() noexcept;
 		void showSoundVolumeMenu() noexcept;
 		void showWelcomeScreen() noexcept;
+
+		std::string getPushToTalkKeyName() const noexcept {
+			return pttScancode == SDL_SCANCODE_UNKNOWN ? "None" : SDL_GetScancodeName(pttScancode);
+		}
 
 		void showStreamErrorText() const noexcept {
 			ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "Could not create an audio stream. Please choose a different device.");

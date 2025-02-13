@@ -101,5 +101,16 @@ namespace vi {
 			return true;
 		}
 	}
+
+	void sendKeyPress(uint16_t scancode, bool pressed) noexcept {
+		INPUT input = {};
+		input.type = INPUT_KEYBOARD;
+		input.ki.wVk = MapVirtualKey(scancode, MAPVK_VSC_TO_VK);
+		input.ki.wScan = scancode;
+		if (!pressed) {
+			input.ki.dwFlags = KEYEVENTF_KEYUP;
+		}
+		SendInput(1, &input, sizeof(INPUT));
+	}
 }
 #endif
