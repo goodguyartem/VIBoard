@@ -60,6 +60,8 @@ int main() {
 	}
 	std::ofstream instanceCheck(instancePath, std::ofstream::trunc);
 
+	SDL_SetAppMetadata("ViBoard", "Beta 1.4.1", nullptr);
+
 	try {
 		vi::init();
 

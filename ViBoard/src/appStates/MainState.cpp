@@ -162,7 +162,7 @@ namespace vi {
 		switch (event.type) {
 		case SDL_EVENT_AUDIO_DEVICE_ADDED: {
 			if (!SDL_IsAudioDevicePlayback(event.adevice.which)) {
-				return;
+				break;
 			}
 
 			const char* name = SDL_GetAudioDeviceName(event.adevice.which);
@@ -190,14 +190,14 @@ namespace vi {
 			if (!SDL_IsAudioDevicePlayback(event.adevice.which)) {
 				return;
 			}
-
 			const auto it = std::find(audioDevices.begin(), audioDevices.end(), event.adevice.which);
 			if (it == audioDevices.end()) {
 				break;
 			}
+			const ptrdiff_t index = std::distance(audioDevices.begin(), it);
 			for (size_t i = 0; i < playback.size(); i++) {
 				PlaybackConfig& config = playback[i];
-				if (config.stream && config.deviceIndex == it - audioDevices.begin()) {
+				if (config.stream && config.deviceIndex == index) {
 					config.stream.reset();
 					if (config.deviceIndex >= static_cast<int>(audioDevices.size() - 1)) {
 						config.deviceIndex = static_cast<int>(audioDevices.size() - 2);
@@ -205,7 +205,7 @@ namespace vi {
 				}
 			}
 			audioDevices.erase(it);
-			deviceNames.erase(deviceNames.begin() + std::distance(it, audioDevices.begin()));
+			deviceNames.erase(deviceNames.begin() + index);
 
 			if (!playback[0].stream) {
 				resetAudioStream(0, false);
@@ -648,7 +648,7 @@ namespace vi {
 		ImGui::Text("Welcome to ViBoard!");
 		ImGui::PopFont();
 		ImGui::PushFont(app->fonts[4]);
-		ImGui::Text("Version Beta 1.4.0");
+		ImGui::Text("Version Beta 1.4.1");
 		ImGui::PopFont();
 		ImGui::NewLine();
 

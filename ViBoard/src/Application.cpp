@@ -122,6 +122,14 @@ namespace vi {
 				quit();
 				break;
 
+			case SDL_EVENT_WINDOW_FOCUS_LOST:
+				inBackground = true;
+				break;
+
+			case SDL_EVENT_WINDOW_FOCUS_GAINED:
+				inBackground = false;
+				break;
+
 			case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
 				if (tray) {
 					SDL_HideWindow(window.get());

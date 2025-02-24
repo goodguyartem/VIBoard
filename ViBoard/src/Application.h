@@ -53,7 +53,7 @@ namespace vi {
 		}
 
 		bool isInactive() const noexcept {
-			return canSleep && SDL_GetWindowFlags(window.get()) & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN);
+			return canSleep && (SDL_GetWindowFlags(window.get()) & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN) || inBackground);
 		}
 
 	private:
