@@ -30,24 +30,32 @@ Clone the repository with:
 ```
 git clone --recursive https://github.com/goodguyartem/VIBoard.git
 ```
-If you're not using Visual Studio you'll also need to obtain [SDL3](https://github.com/libsdl-org/SDL) and [SDL3_Image](https://github.com/libsdl-org/SDL_image) builds matching your compiler.
+If you're not using Visual Studio you'll also need to obtain [SDL3](https://github.com/libsdl-org/SDL) and [SDL3_Image](https://github.com/libsdl-org/SDL_image) builds matching your compiler:
+```
+git clone https://github.com/libsdl-org/SDL.git
+git clone https://github.com/libsdl-org/SDL_image.git
+```
+Compile the SDL libraries and place the compiled library files into `dependencies/SDL3/lib/` and `dependencies/SDL3_image/lib/` respectively.
 
-Navigate to the repository's directory and run the `premake5.lua` build script to generate project files for your IDE of choice. For example, to generate Visual Studio 2022:
+Navigate to the repository's directory and run the `premake5.lua` build script to generate project files for your IDE of choice. For example, to generate Visual Studio 2022 files:
 ```
 premake5 vs2022
 ```
 You can run `premake5 --help` if this is your first time using Premake.
 
 ### Other Operating Systems
-Currently, the project is only available for Windows, but adding support for other operating systems is trivial as all Windows-specific code is abstracted away. Namely, you'll need to implement system-wide hotkey support by defining the functions:
+Currently, the project is only available for Windows, but adding support for other operating systems is trivial as all Windows-specific code is abstracted away in `src/platform/`. Namely, you'll need to implement system-wide hotkey support by defining the functions:
 * `HotkeyId registerHotkey(const Hotkey& hotkey)`, `void unregisterHotkey(HotkeyId id)`, and
 * `void processHotkeyPresses(const Application& app) noexcept`
   
 the ability to launch the program on system startup via the function:
 * `bool setLaunchOnStartup(bool launch, SDL_Window* window)`, and if needed
-* `void initPlatform()` and `void quitPlatform() noexcept`.
+* `void initPlatform()` and `void quitPlatform() noexcept`
 
-See `src/platform/`.
+and a function for sending keyboard input to the OS:
+* `void sendKeyPress(uint16_t scancode, bool pressed) noexcept`
+
+See the current Windows implementations for reference.
 
 ## To-do
 * .ogg support
