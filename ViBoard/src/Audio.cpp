@@ -64,7 +64,7 @@ namespace vi {
 			if (isValidHotkey(hotkeyId)) {
 				unregisterHotkey(hotkeyId);
 			}
-		} catch (std::exception& e) {
+		} catch (const std::exception& e) {
 			VI_ERROR("%s", e.what());
 		}
 	}

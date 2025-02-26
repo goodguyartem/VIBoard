@@ -50,18 +50,17 @@ namespace vi {
 }
 
 int main() {
-	int exit = EXIT_FAILURE;
-
-	static const auto instancePath = vi::getStoragePath() / "ViBoard.instance";
+	static const auto instancePath = vi::storagePath / "ViBoard.instance";
 	std::error_code ec;
 	if (std::filesystem::exists(instancePath) && !std::filesystem::remove(instancePath, ec)) {
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Unable to launch!", "The program is already running! How silly of you...", nullptr);
-		return 0;
+		return EXIT_SUCCESS;
 	}
 	std::ofstream instanceCheck(instancePath, std::ofstream::trunc);
 
 	SDL_SetAppMetadata("ViBoard", "Beta 1.4.1", nullptr);
 
+	int exit = EXIT_FAILURE;
 	try {
 		vi::init();
 
@@ -73,8 +72,8 @@ int main() {
 		VI_CRITICAL("Fatal crash! %s", e.what());
 		vi::onError(e.what());
 	} catch (...) {
-		VI_CRITICAL("Fatal crash! (Catch-all.)");
-		vi::onError("");
+		VI_CRITICAL("Fatal crash! (catch-all)");
+		vi::onError("unknown exception");
 	}
 
 	instanceCheck.close();

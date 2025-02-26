@@ -17,6 +17,16 @@
 namespace fs = std::filesystem;
 
 namespace vi {
+	static fs::path getStoragePath() noexcept {
+		const char* userFolder = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
+		if (!userFolder) {
+			return "";
+		}
+		return fs::path(userFolder) / VI_EXECUTEABLE_NAME;
+	}
+
+	const std::filesystem::path storagePath = getStoragePath();
+
 	void Application::run() {
 		init();
 		running = true;
@@ -197,13 +207,5 @@ namespace vi {
 		SDL_GL_MakeCurrent(window.get(), glContext);
 
 		SDL_GL_SwapWindow(window.get());
-	}
-
-	fs::path getStoragePath() noexcept {
-		const char* userFolder = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
-		if (!userFolder) {
-			return "";
-		}
-		return fs::path(userFolder) / VI_EXECUTEABLE_NAME;
 	}
 }

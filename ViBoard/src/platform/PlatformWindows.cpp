@@ -30,7 +30,7 @@ namespace vi {
 			throw ExternalError("SHGetKnownFolderPath failed.");
 		}
 
-		fs::path getStartupShortcut() {
+		inline fs::path getStartupShortcut() {
 			return getStartupFolderPath() / (VI_EXECUTEABLE_NAME + ".lnk"s);
 		}
 

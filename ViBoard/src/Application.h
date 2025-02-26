@@ -18,6 +18,8 @@ namespace vi {
 
 	using SurfaceOwner = std::unique_ptr<SDL_Surface, decltype(&SDL_DestroySurface)>;
 
+	extern const std::filesystem::path storagePath;
+
 	class Application {
 	public:
 		std::vector<std::unique_ptr<AppState>> states;
@@ -74,8 +76,4 @@ namespace vi {
 		void update();
 		void render() const;
 	};
-
-	std::filesystem::path getStoragePath() noexcept;
-
-	inline const std::filesystem::path storagePath = getStoragePath();
 }

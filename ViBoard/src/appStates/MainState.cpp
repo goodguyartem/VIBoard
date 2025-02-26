@@ -154,7 +154,7 @@ namespace vi {
 		} catch (std::exception& e) {
 			onExitError(e.what());
 		} catch (...) {
-			onExitError("");
+			onExitError("unknown exception");
 		}
 	}
 
@@ -985,7 +985,7 @@ namespace vi {
 		case 3:
 			ImGui::StyleColorsLight();
 			break;
-		case 4:
+		default:
 			assert(false);
 			break;
 		}

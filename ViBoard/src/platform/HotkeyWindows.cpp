@@ -14,7 +14,7 @@ namespace vi {
 	extern std::vector<Hotkey> hotkeys;
 
 	namespace {
-		static unsigned int SdlModToWin32(SDL_Keymod sdlMod) noexcept {
+		unsigned int SdlModToWin32(SDL_Keymod sdlMod) noexcept {
 			assert(ensureInSupportedRange(sdlMod));
 
 			unsigned int win32Mod = 0;

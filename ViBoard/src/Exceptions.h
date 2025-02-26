@@ -2,7 +2,6 @@
 
 #include <stdexcept>
 #include <string>
-#include <format>
 
 namespace vi {
 	class RuntimeError : public std::runtime_error {
