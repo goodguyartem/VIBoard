@@ -30,18 +30,19 @@ Clone the repository with:
 ```
 git clone --recursive https://github.com/goodguyartem/VIBoard.git
 ```
-If you're not using Visual Studio you'll also need to obtain [SDL3](https://github.com/libsdl-org/SDL) and [SDL3_Image](https://github.com/libsdl-org/SDL_image) builds matching your compiler:
-```
-git clone https://github.com/libsdl-org/SDL.git
-git clone https://github.com/libsdl-org/SDL_image.git
-```
-Compile the SDL libraries and place the compiled library files into `dependencies/SDL3/lib/` and `dependencies/SDL3_image/lib/` respectively.
-
 Navigate to the repository's directory and run the `premake5.lua` build script to generate project files for your IDE of choice. For example, to generate Visual Studio 2022 files:
 ```
 premake5 vs2022
 ```
-You can run `premake5 --help` if this is your first time using Premake.
+The included `Build.bat` script can also be ran to generate Visual Studio 2022 files. If you'd like to use MinGW, you can specify so by providing the `--cc=mingw` flag. You can run `premake5 --help` if this is your first time using Premake. 
+
+(Note: So far the project has only been tested with MSVC. Feel free to open an issue if you face problems with other compilers.)
+
+The included [SDL3](https://github.com/libsdl-org/SDL) and [SDL3_Image](https://github.com/libsdl-org/SDL_image) libraries only provide binaries for MSVC and MinGW. If you're using a different compiler you have to obtain appropriate SDL3 binaries for it:
+```
+git clone https://github.com/libsdl-org/SDL.git
+git clone https://github.com/libsdl-org/SDL_image.git
+```
 
 ### Other Operating Systems
 Currently, the project is only available for Windows, but adding support for other operating systems is trivial as all Windows-specific code is abstracted away in `src/platform/`. Namely, you'll need to implement system-wide hotkey support by defining the functions:
