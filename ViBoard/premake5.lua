@@ -22,9 +22,9 @@ project "ViBoard"
 
 	links {
 		"ImGui",
-		"SDL3.lib",
-		"SDL3_image.lib",
-		"opengl32.lib"
+		"SDL3",
+		"SDL3_image",
+		"opengl32"
 	}
 
 	defines {
@@ -33,16 +33,32 @@ project "ViBoard"
 
 	filter "platforms:x64"
 		architecture "x86_64"
-		libdirs {
-			"../dependencies/SDL3/lib/x64",
-			"../dependencies/SDL3_image/lib/x64"
-		}
 	
 	filter "platforms:x86"
 		architecture "x86"
+
+	filter { "action:vs*", "platforms:x64" }
 		libdirs {
-			"../dependencies/SDL3/lib/x86",
-			"../dependencies/SDL3_image/lib/x86"
+			"../dependencies/SDL3/vc/x64",
+			"../dependencies/SDL3_image/vc/x64"
+		}
+
+	filter { "action:vs*", "platforms:x86" }
+		libdirs {
+			"../dependencies/SDL3/vc/x86",
+			"../dependencies/SDL3_image/vc/x86"
+		}
+
+	filter { "toolset:mingw or gcc", "platforms:x64" }
+		libdirs {
+			"../dependencies/SDL3/mingw/x64/lib",
+			"../dependencies/SDL3_image/mingw/x64/lib"
+		}
+
+	filter { "toolset:mingw or gcc", "platforms:x86" }
+		libdirs {
+			"../dependencies/SDL3/mingw/x86/lib",
+			"../dependencies/SDL3_image/mingw/x86/lib"
 		}
 
 	filter "system:windows"

@@ -1,5 +1,5 @@
 # SDL3_image CMake configuration file:
-# This file is meant to be placed in a cmake subfolder of  SDL3_image-devel-3.2.0-VC.zip
+# This file is meant to be placed in a cmake subfolder of  SDL3_image-devel-3.2.2-VC.zip
 
 include(FeatureSummary)
 set_package_properties(SDL3_image PROPERTIES
