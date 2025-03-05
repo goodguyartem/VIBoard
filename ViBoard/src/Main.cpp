@@ -76,7 +76,7 @@ int main() {
 	}
 	std::ofstream instanceCheck(instancePath, std::ofstream::trunc);
 
-	SDL_SetAppMetadata("ViBoard", "Beta 1.4.1", nullptr);
+	SDL_SetAppMetadata("ViBoard", "Beta 1.4.2", nullptr);
 
 	int exit = EXIT_FAILURE;
 	try {

@@ -119,9 +119,9 @@ namespace vi {
 
 		Hotkey deserializeHotkey(const nlohmann::json& json) {
 			Hotkey hotkey;
-			json["scancode"].get_to(hotkey.scancode);
-			json["raw"].get_to(hotkey.raw);
-			json["mod"].get_to(hotkey.mod);
+			json.at("scancode").get_to(hotkey.scancode);
+			json.at("raw").get_to(hotkey.raw);
+			json.at("mod").get_to(hotkey.mod);
 
 			if (hotkey.scancode < SDL_SCANCODE_UNKNOWN || hotkey.scancode >= SDL_SCANCODE_COUNT || !ensureInSupportedRange(hotkey.mod)) {
 				throw IOError("Bad hotkey.");
@@ -892,10 +892,10 @@ namespace vi {
 			throw IOError("Stream in error state after read.");
 		}
 
-		file["showWelcome"].get_to(showWelcome);
+		file.at("showWelcome").get_to(showWelcome);
 
-		for (const json& boardJson : file["soundboards"]) {
-			fs::path boardPath = boardJson["path"].get<fs::path>();
+		for (const json& boardJson : file.at("soundboards")) {
+			fs::path boardPath = boardJson.at("path").get<fs::path>();
 			if (!fs::exists(boardPath)) {
 				soundboards.emplace_back(std::move(boardPath));
 				continue;
@@ -911,7 +911,7 @@ namespace vi {
 			for (size_t i = 0; i < soundboards.back().sounds.size(); i++) {
 				Sound& sound = soundboards.back().sounds[i];
 
-				const json& soundsJson = boardJson["sounds"];
+				const json& soundsJson = boardJson.at("sounds");
 				const auto it = soundsJson.find(sound.getPath());
 				if (it == soundsJson.end()) {
 					continue;
@@ -934,19 +934,19 @@ namespace vi {
 
 		for (size_t i = 0; i < playback.size(); i++) {
 			PlaybackConfig& config = playback[i];
-			const json& configJson = file["playback"][i];
+			const json& configJson = file.at("playback").at(i);
 
-			configJson["preferred"].get_to(config.preferred);
+			configJson.at("preferred").get_to(config.preferred);
 
-			const float gain = configJson["gain"].get<float>();
+			const float gain = configJson.at("gain").get<float>();
 			if (gain < 0.0f || gain > 2.0f) {
 				throw IOError("Bad gain.");
 			}
 			config.gain = gain;
 		}
 
-		file["dualPlayback"].get_to(dualPlayback);
-		if (!file["stopHotkey"].is_null()) {
+		file.at("dualPlayback").get_to(dualPlayback);
+		if (!file.at("stopHotkey").is_null()) {
 			Hotkey hotkey = deserializeHotkey(file["stopHotkey"]);
 			hotkey.callback = [this]() {
 				stop();
@@ -960,14 +960,14 @@ namespace vi {
 		}
 		this->theme = theme;
 
-		file["minimizeToTray"].get_to(minimizeToTray);
-		file["startMinimized"].get_to(startMinimized);
+		file.at("minimizeToTray").get_to(minimizeToTray);
+		file.at("startMinimized").get_to(startMinimized);
 
-		file["pttScancode"].get_to(pttScancode);
-		file["pttRaw"].get_to(pttRaw);
-		file["usePtt"].get_to(usePtt);
+		file.at("pttScancode").get_to(pttScancode);
+		file.at("pttRaw").get_to(pttRaw);
+		file.at("usePtt").get_to(usePtt);
 
-		if (!file["pttToggleHotkey"].is_null()) {
+		if (!file.at("pttToggleHotkey").is_null()) {
 			Hotkey hotkey = deserializeHotkey(file["pttToggleHotkey"]);
 			hotkey.callback = [this]() {
 				usePtt = !usePtt;
@@ -975,14 +975,14 @@ namespace vi {
 			pttToggleHotkey = registerHotkey(hotkey);
 		}
 
-		if (file["maximized"].get<bool>()) {
+		if (file.at("maximized").get<bool>()) {
 			SDL_MaximizeWindow(app->getWindow());
 		} else {
 			SDL_Rect windowBounds;
-			file["windowX"].get_to(windowBounds.x);
-			file["windowY"].get_to(windowBounds.y);
-			file["windowWidth"].get_to(windowBounds.w);
-			file["windowHeight"].get_to(windowBounds.h);
+			file.at("windowX").get_to(windowBounds.x);
+			file.at("windowY").get_to(windowBounds.y);
+			file.at("windowWidth").get_to(windowBounds.w);
+			file.at("windowHeight").get_to(windowBounds.h);
 		
 			SDL_SetWindowPosition(app->getWindow(), windowBounds.x, windowBounds.y);
 			SDL_SetWindowSize(app->getWindow(), windowBounds.w, windowBounds.h);
