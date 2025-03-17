@@ -37,8 +37,8 @@ namespace vi {
 	using HotkeyId = int;
 	inline constexpr HotkeyId nullHotkey = -1;
 
-	HotkeyId registerHotkey(const Hotkey& hotKey);
-	void unregisterHotkey(HotkeyId id);
+	HotkeyId registerHotkey(const Hotkey& hotKey) noexcept;
+	bool unregisterHotkey(HotkeyId id) noexcept;
 
 	bool isValidHotkey(HotkeyId id) noexcept;
 	Hotkey& getHotkey(HotkeyId id) noexcept;

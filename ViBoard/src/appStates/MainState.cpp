@@ -41,6 +41,9 @@ namespace vi {
 	namespace {
 		constexpr ImVec2 buttonSize(0.0f, 32.0f);
 
+		const std::filesystem::path settingsPath = storagePath / "settings.json";
+		const std::filesystem::path imGuiPath = storagePath / "imgui.ini";
+
 		void browseFiles(void* userData, const char* const* fileList, int filter) noexcept {
 			SDL_assert(userData);
 			if (!fileList || *fileList == nullptr || !fs::exists(*fileList)) {
@@ -129,8 +132,27 @@ namespace vi {
 			return hotkey;
 		}
 
-		const std::filesystem::path settingsPath = storagePath / "settings.json";
-		const std::filesystem::path imGuiPath = storagePath / "imgui.ini";
+		inline HotkeyId tryRegisterHotkey(const Hotkey& hotkey, SDL_Window* window) noexcept {
+			const HotkeyId id = registerHotkey(hotkey);
+			if (id == nullHotkey) {
+				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+					"Failed to register hotkey!",
+					"An error occured while registering hotkey. It may already be in use by another program.",
+					window);
+			}
+			return id;
+		}
+
+		inline bool tryUnregisterHotkey(HotkeyId id, SDL_Window* window) noexcept {
+			if (!unregisterHotkey(id)) {
+				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+					"Failed to register hotkey!",
+					"An error occured while registering hotkey. It may already be in use by another program.",
+					window);
+				return false;
+			}
+			return true;
+		}
 	}
 
 	MainState::MainState(Application& app)
@@ -189,13 +211,8 @@ namespace vi {
 
 			for (size_t i = 0; i < playback.size(); i++) {
 				PlaybackConfig& config = playback[i];
-				const bool preferred = config.preferred == name;
-
-				if (!config.stream || preferred) {
-					if (preferred) {
-						config.deviceIndex = static_cast<int>(audioDevices.size() - 1);
-					}
-					resetAudioStream(i, false);
+				if (config.preferred == name) {
+					config.deviceIndex = static_cast<int>(audioDevices.size() - 1);
 				}
 				if (!dualPlayback) {
 					break;
@@ -215,22 +232,12 @@ namespace vi {
 			const ptrdiff_t index = std::distance(audioDevices.begin(), it);
 			for (size_t i = 0; i < playback.size(); i++) {
 				PlaybackConfig& config = playback[i];
-				if (config.stream && config.deviceIndex == index) {
-					config.stream.reset();
-					if (config.deviceIndex >= static_cast<int>(audioDevices.size() - 1)) {
-						config.deviceIndex = static_cast<int>(audioDevices.size() - 2);
-					}
+				if (config.deviceIndex >= static_cast<int>(audioDevices.size() - 1)) {
+					config.deviceIndex = static_cast<int>(audioDevices.size() - 2);
 				}
 			}
 			audioDevices.erase(it);
 			deviceNames.erase(deviceNames.begin() + index);
-
-			if (!playback[0].stream) {
-				resetAudioStream(0, false);
-			}
-			if (dualPlayback && !playback[1].stream) {
-				resetAudioStream(1, false);
-			}
 			break;
 		}
 
@@ -253,7 +260,7 @@ namespace vi {
 				assert(keyAssign.id);
 
 				if (isValidHotkey(*keyAssign.id)) {
-					unregisterHotkey(*keyAssign.id);
+					tryUnregisterHotkey(*keyAssign.id, app->getWindow());
 					*keyAssign.id = nullHotkey;
 				}
 
@@ -263,7 +270,7 @@ namespace vi {
 					hotkey.raw = event.key.raw;
 					hotkey.mod = mod;
 					hotkey.callback = keyAssign.action;
-					*keyAssign.id = registerHotkey(hotkey);
+					*keyAssign.id = tryRegisterHotkey(hotkey, app->getWindow());
 				}
 
 				keyAssign.assigning = false;
@@ -278,13 +285,15 @@ namespace vi {
 				pttAssign.assigning = false;
 			}
 			break;
+
+		case SDL_EVENT_WINDOW_MINIMIZED:
+			serialize();
+			break;
 		}
 	}
 
 	void MainState::update() noexcept {
-		if (!app->canSleep && SDL_GetAudioStreamAvailable(playback[0].stream.get()) == 0 && SDL_GetAudioStreamAvailable(playback[1].stream.get()) == 0) {
-			app->canSleep = true;
-		}
+		app->canSleep = !playback[0].stream && !playback[1].stream;
 
 		if (showWelcome) {
 			ImGui::PushStyleVarX(ImGuiStyleVar_FramePadding, 8.0f);
@@ -311,16 +320,7 @@ namespace vi {
 		ImGui::PopStyleVar();
 
 		if (pttScancode != SDL_SCANCODE_UNKNOWN) {
-			bool sendPtt = false;
-			if (usePtt) {
-				for (const PlaybackConfig& config : playback) {
-					if (config.stream && SDL_GetAudioStreamAvailable(config.stream.get()) != 0) {
-						sendPtt = true;
-						break;
-					}
-				}
-			}
-			if (sendPtt) {
+			if (usePtt && (playback[0].stream || playback[1].stream)) {
 				sendKeyPress(pttRaw, true);
 				pttActive = true;
 			} else if (pttActive) {
@@ -328,11 +328,15 @@ namespace vi {
 				pttActive = false;
 			}
 		}
+
+		for (PlaybackConfig& config : playback) {
+			if (config.stream && SDL_GetAudioStreamAvailable(config.stream.get()) <= 0) {
+				config.stream.reset();
+			}
+		}
 	}
 
 	void MainState::showSoundboards() noexcept {
-		ImGui::BeginDisabled(!playback[0].stream);
-
 		if (browseData.ready) {
 			soundboards.push_back(std::move(browseData.result));
 			browseData.ready = false;
@@ -371,7 +375,7 @@ namespace vi {
 							keyAssign.id = sound.getHotkeyId();
 							keyAssign.action = [this, boardIndex, soundIndex]() {
 								tryPlay(soundboards[boardIndex].sounds[soundIndex]);
-								};
+							};
 						} else if (ImGui::MenuItem(("Set volume"))) {
 							soundVolumeMenu.showMenu = true;
 							soundVolumeMenu.sound = soundIndex;
@@ -414,7 +418,6 @@ namespace vi {
 				}
 			}
 		}
-		ImGui::EndDisabled();
 	}
 
 	void MainState::showOptions() noexcept {
@@ -425,30 +428,13 @@ namespace vi {
 
 		ImGui::Text("Output device");
 		ImGui::SetNextItemWidth(selectablesWidth);
-		if (ImGui::Combo("##output1", &playback[0].deviceIndex, deviceNames.data(), static_cast<int>(deviceNames.size()), 10)) {
-			resetAudioStream(0, true);
-		}
-		if (!playback[0].stream) {
-			showStreamErrorText();
-		}
-
-		if (ImGui::Checkbox("Add secondary output", &dualPlayback)) {
-			if (!dualPlayback) {
-				playback[1].stream.reset();
-			} else if (!playback[1].stream) {
-				resetAudioStream(1, false);
-			}
-		}
+		ImGui::Combo("##output1", &playback[0].deviceIndex, deviceNames.data(), static_cast<int>(deviceNames.size()), 10);
+		ImGui::Checkbox("Add secondary output", &dualPlayback);
 
 		if (dualPlayback) {
 			ImGui::Text("Secondary output device");
 			ImGui::SetNextItemWidth(selectablesWidth);
-			if (ImGui::Combo("##output2", &playback[1].deviceIndex, deviceNames.data(), static_cast<int>(deviceNames.size()), 10)) {
-				resetAudioStream(1, true);
-			}
-			if (!playback[1].stream) {
-				showStreamErrorText();
-			}
+			ImGui::Combo("##output2", &playback[1].deviceIndex, deviceNames.data(), static_cast<int>(deviceNames.size()), 10);
 		}
 
 		ImGui::NewLine();
@@ -474,14 +460,14 @@ namespace vi {
 			keyAssign.id = &stopHotkey;
 			keyAssign.action = [this]() {
 				stop();
-				};
+			};
 		}
 		const std::string stopHotkeyLabel = std::format("Stop hotkey: {}.", getHotkeyName(stopHotkey));
 		ImGui::Text(stopHotkeyLabel.c_str());
 		ImGui::NewLine();
 
 		ImGui::Checkbox("Send push-to-talk key", &usePtt);
-		
+
 		ImVec4 textCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
 		textCol.w = 0.7f;
 		ImGui::PushStyleColor(ImGuiCol_Text, textCol);
@@ -627,7 +613,7 @@ namespace vi {
 			} else {
 				ImGui::NewLine();
 				ImGui::Text("Press a key you would like to assign, or [Del] to remove.");
-				
+
 				if (ImGui::Button("Cancel")) {
 					pttAssign.assigning = false;
 				}
@@ -742,47 +728,21 @@ namespace vi {
 		sound.setGainOverride(index, gain);
 	}
 
-	void MainState::resetAudioStream(size_t index, bool makePreferred) noexcept {
-		PlaybackConfig& config = playback[index];
-		AudioStreamOwner& stream = config.stream;
-
-		assert(config.deviceIndex < static_cast<int>(audioDevices.size()));
-		stream.reset(SDL_OpenAudioDeviceStream(audioDevices[config.deviceIndex], nullptr, nullptr, nullptr));
-		if (makePreferred) {
-			config.preferred = deviceNames[config.deviceIndex];
-		}
-
-		VI_INFO("Reset audio stream %zu.", index);
-
-		if (!stream) {
-			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-				"Failed to open audio stream!",
-				std::format("Could not open an audio stream using device {}.\n"
-					"There may be an issue with the device, please select a different device.\n\n"
-					"Note: if you are using VB-Cable, be sure to select the 16ch variant.\n",
-					deviceNames[config.deviceIndex]).c_str(),
-				app->getWindow());
-			return;
-		}
-
-		SDL_SetAudioStreamGain(stream.get(), config.gain);
-	}
-
 	void MainState::tryPlay(const Sound& sound) noexcept {
-		try {
-			const bool playS0 = playback[0].stream != nullptr;
-			const bool playS1 = dualPlayback && playback[1].stream && playback[0].deviceIndex != playback[1].deviceIndex;
+		const bool playDual = dualPlayback && playback[0].deviceIndex != playback[1].deviceIndex;
 
-			if (playS0 || playS1) {
-				if (playS0) {
-					sound.play(playback[0].stream.get(), 0);
-				}
-				if (playS1) {
-					sound.play(playback[1].stream.get(), 1);
-				}
-				if (pttScancode != SDL_SCANCODE_UNKNOWN && usePtt) {
-					app->canSleep = false;
-				}
+		playback[0].stream.reset(SDL_OpenAudioDeviceStream(audioDevices[playback[0].deviceIndex], nullptr, nullptr, nullptr));
+		if (playDual) {
+			playback[1].stream.reset(SDL_OpenAudioDeviceStream(audioDevices[playback[1].deviceIndex], nullptr, nullptr, nullptr));
+		}
+
+		try {
+			sound.play(playback[0].stream.get(), 0);
+			if (playDual) {
+				sound.play(playback[1].stream.get(), 1);
+			}
+			if (pttScancode != SDL_SCANCODE_UNKNOWN && usePtt) {
+				app->canSleep = false;
 			}
 		} catch (const std::exception& e) {
 			const std::string message = std::format(
@@ -797,13 +757,9 @@ namespace vi {
 		}
 	}
 
-	void MainState::stop() const noexcept {
-		for (const PlaybackConfig& config : playback) {
-			if (config.stream) {
-				SDL_AudioStream* stream = config.stream.get();
-				SDL_PauseAudioStreamDevice(stream);
-				SDL_ClearAudioStream(stream);
-			}
+	void MainState::stop() noexcept {
+		for (PlaybackConfig& config : playback) {
+			config.stream.reset();
 		}
 	}
 
@@ -926,8 +882,8 @@ namespace vi {
 					const size_t soundboardIndex = soundboards.size() - 1;
 					hotkey.callback = [this, i, soundboardIndex]() {
 						tryPlay(soundboards[soundboardIndex].sounds[i]);
-						};
-					*sound.getHotkeyId() = registerHotkey(hotkey);
+					};
+					*sound.getHotkeyId() = tryRegisterHotkey(hotkey, app->getWindow());
 				}
 			}
 		}
@@ -950,8 +906,8 @@ namespace vi {
 			Hotkey hotkey = deserializeHotkey(file["stopHotkey"]);
 			hotkey.callback = [this]() {
 				stop();
-				};
-			stopHotkey = registerHotkey(hotkey);
+			};
+			stopHotkey = tryRegisterHotkey(hotkey, app->getWindow());
 		}
 
 		const int theme = file["theme"].get<int>();
@@ -972,7 +928,7 @@ namespace vi {
 			hotkey.callback = [this]() {
 				usePtt = !usePtt;
 			};
-			pttToggleHotkey = registerHotkey(hotkey);
+			pttToggleHotkey = tryRegisterHotkey(hotkey, app->getWindow());
 		}
 
 		if (file.at("maximized").get<bool>()) {
@@ -983,7 +939,7 @@ namespace vi {
 			file.at("windowY").get_to(windowBounds.y);
 			file.at("windowWidth").get_to(windowBounds.w);
 			file.at("windowHeight").get_to(windowBounds.h);
-		
+
 			SDL_SetWindowPosition(app->getWindow(), windowBounds.x, windowBounds.y);
 			SDL_SetWindowSize(app->getWindow(), windowBounds.w, windowBounds.h);
 		}
@@ -1045,19 +1001,19 @@ namespace vi {
 
 		SDL_SetTrayEntryCallback(showEntry,
 			[](void* userData, SDL_TrayEntry* entry) {
-				const Application& app = *static_cast<Application*>(userData);
+			const Application& app = *static_cast<Application*>(userData);
 
-				SDL_ShowWindow(app.getWindow());
-				SDL_RestoreWindow(app.getWindow());
-			},
+			SDL_ShowWindow(app.getWindow());
+			SDL_RestoreWindow(app.getWindow());
+		},
 			app);
 
 		SDL_TrayEntry* quitEntry = SDL_InsertTrayEntryAt(menu, -1, "Quit", SDL_TRAYENTRY_BUTTON);
 
 		SDL_SetTrayEntryCallback(quitEntry,
 			[](void* userData, SDL_TrayEntry* entry) {
-				static_cast<Application*>(userData)->quit();
-			},
+			static_cast<Application*>(userData)->quit();
+		},
 			app);
 	}
 }

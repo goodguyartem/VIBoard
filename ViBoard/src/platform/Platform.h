@@ -23,8 +23,12 @@
 #include <stdint.h>
 
 namespace vi {
+	class Application;
+
 	void initPlatform();
 	void quitPlatform() noexcept;
+
+	void onPlatformEvent(const Application& app) noexcept;
 
 	bool isLaunchingOnStartup();
 	bool setLaunchOnStartup(bool launch, SDL_Window* window);

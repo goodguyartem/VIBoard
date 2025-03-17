@@ -132,9 +132,8 @@ namespace vi {
 		}
 		void showGainOverrideSlider(Sound& sound, size_t index) noexcept;
 
-		void resetAudioStream(size_t index, bool makePreferred) noexcept;
 		void tryPlay(const Sound& sound) noexcept;
-		void stop() const noexcept;
+		void stop() noexcept;
 
 		void serialize();
 		void deserialize();

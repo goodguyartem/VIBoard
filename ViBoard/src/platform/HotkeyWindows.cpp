@@ -69,32 +69,34 @@ namespace vi {
 		}
 	}
 
-	HotkeyId registerHotkey(const Hotkey& hotkey) {
+	HotkeyId registerHotkey(const Hotkey& hotkey) noexcept {
 		assert(hotkey.raw != 0); // Hotkey must have a valid scancode.
 
 		const HotkeyId id = static_cast<HotkeyId>(hotkeys.size());
 		if (!RegisterHotKey(nullptr, id, SdlModToWin32(hotkey.mod) | MOD_NOREPEAT, getVk(hotkey))) {
-			throw ExternalError("Failed to register hotkey.");
+			VI_ERROR("Failed to register hotkey.");
+			return nullHotkey;
 		}
 		hotkeys.push_back(hotkey);
 		return id;
 	}
 
-	void unregisterHotkey(HotkeyId id) {
-		assert(isValidHotkey(id));
+	bool unregisterHotkey(HotkeyId id) noexcept {
+		if (!isValidHotkey(id)) {
+			VI_ERROR("Invalid hotkey ID!");
+			return false;
+		}
 		if (!UnregisterHotKey(nullptr, id)) {
-			throw ExternalError("Failed to unregister hotkey.");
+			VI_ERROR("Failed to unregister hotkey.");
+			return false;
 		}
 		// We could also remember that this id was freed, then reuse it for next time.
 		// However, in practice, it's nearly impossible to run out of IDs or memory by registering too many hotkeys.
 		hotkeys[id] = Hotkey();
+		return true;
 	}
 
 	void processHotkeyPresses(const Application& app) noexcept {
-		if (app.isInactive()) {
-			WaitMessage();
-		}
-
 		MSG msg(0);
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_NOREMOVE) && msg.message == WM_HOTKEY) { // System events get cleared by SDL in main event loop.
 			assert(isValidHotkey(static_cast<HotkeyId>(msg.wParam)));

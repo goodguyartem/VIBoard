@@ -17,8 +17,10 @@
 */
 
 #ifdef VI_PLATFORM_WINDOWS
+#include "../Application.h"
 #include "Platform.h"
 #include "../Exceptions.h"
+#include "Hotkey.h"
 
 #include <string>
 #include <filesystem>
@@ -93,6 +95,13 @@ namespace vi {
 
 	void quitPlatform() noexcept {
 		CoUninitialize();
+	}
+
+	void onPlatformEvent(const Application& app) noexcept {
+		if (app.isInactive()) {
+			WaitMessage();
+		}
+		processHotkeyPresses(app);
 	}
 
 	bool isLaunchingOnStartup() {

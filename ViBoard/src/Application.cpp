@@ -19,7 +19,6 @@
 #include "Application.h"
 #include "appStates/MainState.h"
 #include "Exceptions.h"
-#include "platform/Hotkey.h"
 #include "platform/Platform.h"
 #include "ImGuiConfig.h"
 
@@ -35,12 +34,14 @@
 namespace fs = std::filesystem;
 
 namespace vi {
-	static fs::path getStoragePath() noexcept {
-		const char* userFolder = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
-		if (!userFolder) {
-			return "";
+	namespace {
+		fs::path getStoragePath() noexcept {
+			const char* userFolder = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
+			if (!userFolder) {
+				return "";
+			}
+			return fs::path(userFolder) / VI_EXECUTEABLE_NAME;
 		}
-		return fs::path(userFolder) / VI_EXECUTEABLE_NAME;
 	}
 
 	const std::filesystem::path storagePath = getStoragePath();
@@ -138,7 +139,7 @@ namespace vi {
 	}
 
 	void Application::pollEvents() noexcept {
-		processHotkeyPresses(*this);
+		onPlatformEvent(*this);
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {

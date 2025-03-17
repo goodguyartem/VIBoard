@@ -33,6 +33,7 @@
 #endif
 
 #include <utility>
+#include <tuple>
 #include <stdlib.h>
 
 namespace fs = std::filesystem;
@@ -84,6 +85,7 @@ namespace vi {
 			}
 		} catch (const std::exception& e) {
 			VI_ERROR("%s", e.what());
+			std::ignore = e;
 		}
 	}
 
@@ -130,24 +132,22 @@ namespace vi {
 	}
 
 	void Sound::play(SDL_AudioStream* stream, size_t gainIndex) const {
-		SDL_PauseAudioStreamDevice(stream);
 		SDL_ClearAudioStream(stream);
-
 		SDL_SetAudioStreamFormat(stream, &spec, nullptr);
+
 		if (gains[gainIndex].use) {
 			SDL_SetAudioStreamGain(stream, gains[gainIndex].gain);
 		}
-
 		if (!SDL_PutAudioStreamData(stream, buffer, len) || !SDL_ResumeAudioStreamDevice(stream)) {
 			throw ExternalError(SDL_GetError());
 		}
 	}
 
 	void from_json(const nlohmann::json& json, GainOverride& gain) {
-		json["gain"].get_to(gain.gain);
+		json.at("gain").get_to(gain.gain);
 		if (gain.gain < 0.0f || gain.gain > 2.0f) {
 			throw IOError("Bad gain override.");
 		}
-		json["use"].get_to(gain.use);
+		json.at("use").get_to(gain.use);
 	}
 }
