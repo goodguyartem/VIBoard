@@ -13,7 +13,7 @@ A lightweight free and open-source soundboard.
 ![Screenshot](https://github.com/goodguyartem/ViBoard/blob/main/screenshots/image3.png?raw=true)
 
 ## Installing
-Simply download the latest build matching your architecture (x64 or x86) from the [Releases](https://github.com/goodguyartem/VIBoard/releases) section and extract the downloaded .zip file into a directory of your choosing (such as C:\Program Files). Currently, only Windows builds are available.
+Download the latest build from the [Releases](https://github.com/goodguyartem/VIBoard/releases) section and extract the downloaded .zip file into a directory of your choosing (such as C:\Program Files). Currently, only x64 Windows builds are available (until there's demand for other builds).
 
 If you would like to mix your microphone input with your soundboard, download [VB Cable](https://vb-audio.com/Cable/) and use it as your secondary output device. See the Getting Started section of the program's Welcome page for setup instructions.
 
@@ -45,16 +45,7 @@ git clone https://github.com/libsdl-org/SDL_image.git
 ```
 
 ### Other Operating Systems
-Currently, the project is only available for Windows, but adding support for other operating systems is trivial as all Windows-specific code is abstracted away in `src/platform/`. Namely, you'll need to implement system-wide hotkey support by defining the functions:
-* `HotkeyId registerHotkey(const Hotkey& hotkey)`, `void unregisterHotkey(HotkeyId id)`, and
-* `void processHotkeyPresses(const Application& app) noexcept`
-  
-the ability to launch the program on system startup via the function:
-* `bool setLaunchOnStartup(bool launch, SDL_Window* window)`, and if needed
-* `void initPlatform()` and `void quitPlatform() noexcept`
-
-and a function for sending keyboard input to the OS:
-* `void sendKeyPress(uint16_t scancode, bool pressed) noexcept`
+Currently, the project is only available for Windows, but adding support for other operating systems is trivial as all Windows-specific code is abstracted away in `src/platform/`. Namely, you'll need to implement system-wide hotkey support, the ability to launch the program on system startup, and a function for sending keyboard input to the OS.
 
 See the current Windows implementations for reference.
 
