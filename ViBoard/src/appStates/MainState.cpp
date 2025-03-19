@@ -449,7 +449,7 @@ namespace vi {
 			showGainSlider(1);
 		}
 
-		ImGui::BeginDisabled(SDL_GetAudioStreamAvailable(playback[0].stream.get()) == 0);
+		ImGui::BeginDisabled(!playback[0].stream && !playback[1].stream);
 		if (ImGui::Button("Stop", buttonSize)) {
 			stop();
 		}
@@ -732,8 +732,10 @@ namespace vi {
 		const bool playDual = dualPlayback && playback[0].deviceIndex != playback[1].deviceIndex;
 
 		playback[0].stream.reset(SDL_OpenAudioDeviceStream(audioDevices[playback[0].deviceIndex], nullptr, nullptr, nullptr));
+		SDL_SetAudioStreamGain(playback[0].stream.get(), playback[0].gain);
 		if (playDual) {
 			playback[1].stream.reset(SDL_OpenAudioDeviceStream(audioDevices[playback[1].deviceIndex], nullptr, nullptr, nullptr));
+			SDL_SetAudioStreamGain(playback[1].stream.get(), playback[1].gain);
 		}
 
 		try {
